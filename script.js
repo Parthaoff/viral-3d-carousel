@@ -48,15 +48,15 @@ scene.add(group)
 const loader = new THREE.TextureLoader()
 
 const images = [
-"images/1.jpg",
-"images/2.jpg",
-"images/3.jpg",
-"images/4.jpg",
-"images/5.jpg",
-"images/6.jpg",
-"images/7.jpg",
-"images/8.jpg"
-]
+"https://picsum.photos/id/1015/600/900",
+"https://picsum.photos/id/1016/600/900",
+"https://picsum.photos/id/1018/600/900",
+"https://picsum.photos/id/1025/600/900",
+"https://picsum.photos/id/1035/600/900",
+"https://picsum.photos/id/1043/600/900",
+"https://picsum.photos/id/1050/600/900",
+"https://picsum.photos/id/1062/600/900"
+];
 
 const radius = 5
 
