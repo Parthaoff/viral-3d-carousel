@@ -1,7 +1,7 @@
 const container = document.getElementById("container")
 
 const scene = new THREE.Scene()
-scene.fog = new THREE.Fog(0x000000,10,35)
+scene.fog = new THREE.Fog(0x000000,8,40)
 
 const camera = new THREE.PerspectiveCamera(
 70,
@@ -10,7 +10,7 @@ window.innerWidth/window.innerHeight,
 1000
 )
 
-camera.position.set(0,1,11)
+camera.position.set(0,2,14)
 
 const renderer = new THREE.WebGLRenderer({antialias:true})
 renderer.setSize(window.innerWidth,window.innerHeight)
@@ -20,13 +20,12 @@ container.appendChild(renderer.domElement)
 
 /* lighting */
 
-const ambient = new THREE.AmbientLight(0xffffff,0.4)
+const ambient = new THREE.AmbientLight(0xffffff,.5)
 scene.add(ambient)
 
-const spot = new THREE.SpotLight(0xffffff,2)
-spot.position.set(5,15,10)
-spot.castShadow = true
-scene.add(spot)
+const light = new THREE.SpotLight(0xffffff,2)
+light.position.set(5,20,10)
+scene.add(light)
 
 /* glossy floor */
 
@@ -34,18 +33,17 @@ const floorGeo = new THREE.PlaneGeometry(200,200)
 
 const floorMat = new THREE.MeshStandardMaterial({
 color:0x111111,
-roughness:0.25,
-metalness:0.8
+roughness:.3,
+metalness:.8
 })
 
 const floor = new THREE.Mesh(floorGeo,floorMat)
 floor.rotation.x = -Math.PI/2
 floor.position.y = -2
-floor.receiveShadow = true
 
 scene.add(floor)
 
-/* carousel group */
+/* group */
 
 const group = new THREE.Group()
 scene.add(group)
@@ -53,149 +51,131 @@ scene.add(group)
 const loader = new THREE.TextureLoader()
 
 const images = [
-"https://picsum.photos/id/1015/600/900",
-"https://picsum.photos/id/1016/600/900",
-"https://picsum.photos/id/1018/600/900",
-"https://picsum.photos/id/1025/600/900",
-"https://picsum.photos/id/1035/600/900",
-"https://picsum.photos/id/1043/600/900",
-"https://picsum.photos/id/1050/600/900",
-"https://picsum.photos/id/1062/600/900"
+"https://picsum.photos/id/1015/800/1000",
+"https://picsum.photos/id/1016/800/1000",
+"https://picsum.photos/id/1018/800/1000",
+"https://picsum.photos/id/1025/800/1000",
+"https://picsum.photos/id/1035/800/1000",
+"https://picsum.photos/id/1043/800/1000"
 ]
 
-const radius = 6
+const sliceCount = 12
+const width = 6
 
-images.forEach((img,i)=>{
+images.forEach((img,index)=>{
 
 const texture = loader.load(img)
 
-const geo = new THREE.PlaneGeometry(2.8,3.8)
+for(let i=0;i<sliceCount;i++){
 
-const mat = new THREE.MeshStandardMaterial({
+const geometry = new THREE.PlaneGeometry(width/sliceCount,4)
+
+const material = new THREE.MeshStandardMaterial({
 map:texture,
-roughness:0.15,
-metalness:0.25
+transparent:true
 })
 
-const mesh = new THREE.Mesh(geo,mat)
+material.map.repeat.set(1/sliceCount,1)
+material.map.offset.x = i/sliceCount
 
-const angle = i*(Math.PI*2/images.length)
+const mesh = new THREE.Mesh(geometry,material)
 
-mesh.position.x = Math.sin(angle)*radius
-mesh.position.z = Math.cos(angle)*radius
+mesh.position.x = -width/2 + (i*(width/sliceCount)) + (width/sliceCount)/2
+mesh.position.z = -index*5
 
-mesh.lookAt(0,0,0)
-
-mesh.castShadow = true
+mesh.userData.index=index
 
 group.add(mesh)
 
+}
+
 })
 
-/* arrow rotation */
+/* cinematic intro */
 
-let targetRotation = 0
+gsap.from(camera.position,{
+z:30,
+duration:2,
+ease:"power3.out"
+})
+
+/* flip animation */
+
+function flipTo(index){
+
+group.children.forEach((slice,i)=>{
+
+if(slice.userData.index===index){
+
+gsap.to(slice.rotation,{
+y:0,
+duration:1,
+delay:(i%sliceCount)*0.05
+})
+
+}else{
+
+gsap.to(slice.rotation,{
+y:Math.PI,
+duration:1
+})
+
+}
+
+})
+
+}
+
+/* controls */
+
+let current=0
 
 document.getElementById("next").onclick=()=>{
 
-targetRotation -= Math.PI*2/images.length
+current++
+if(current>=images.length)current=0
 
-gsap.to(group.rotation,{
-y:targetRotation,
-duration:1.2,
-ease:"power3.out"
-})
+flipTo(current)
 
 }
 
 document.getElementById("prev").onclick=()=>{
 
-targetRotation += Math.PI*2/images.length
+current--
+if(current<0)current=images.length-1
 
-gsap.to(group.rotation,{
-y:targetRotation,
-duration:1.2,
-ease:"power3.out"
-})
+flipTo(current)
 
 }
 
-/* drag inertia */
+/* drag rotate */
 
-let isDragging=false
-let velocity=0
+let dragging=false
 let lastX=0
 
 window.addEventListener("mousedown",e=>{
-isDragging=true
+dragging=true
 lastX=e.clientX
 })
 
 window.addEventListener("mousemove",e=>{
 
-if(!isDragging)return
+if(!dragging)return
 
 let delta=(e.clientX-lastX)*0.005
-
-velocity=delta
-
-group.rotation.y+=delta
+group.rotation.y += delta
 
 lastX=e.clientX
 
 })
 
-window.addEventListener("mouseup",()=>{
+window.addEventListener("mouseup",()=>dragging=false)
 
-isDragging=false
-
-})
-
-/* mobile swipe */
-
-window.addEventListener("touchstart",e=>{
-lastX=e.touches[0].clientX
-})
-
-window.addEventListener("touchmove",e=>{
-
-let delta=(e.touches[0].clientX-lastX)*0.005
-
-velocity=delta
-
-group.rotation.y+=delta
-
-lastX=e.touches[0].clientX
-
-})
-
-/* hover zoom */
-
-window.addEventListener("mousemove",(e)=>{
-
-let x=(e.clientX/window.innerWidth - 0.5)*2
-let y=(e.clientY/window.innerHeight - 0.5)*2
-
-gsap.to(camera.position,{
-x:x*1.2,
-y:1+y*0.5,
-duration:0.8
-})
-
-})
-
-/* animation */
+/* animate */
 
 function animate(){
 
 requestAnimationFrame(animate)
-
-/* inertia */
-
-group.rotation.y += velocity
-velocity *= 0.94
-
-/* slow auto rotation */
 
 group.rotation.y += 0.001
 
@@ -205,7 +185,7 @@ renderer.render(scene,camera)
 
 animate()
 
-/* responsive */
+/* resize */
 
 window.addEventListener("resize",()=>{
 
